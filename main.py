@@ -1,14 +1,11 @@
 import streamlit as st
 import pandas as pd
-from dotenv import load_dotenv
 from question_insight_generator import generate_questions_from_csv
 from pandasai.llm.starcoder import Starcoder
 from pandasai import PandasAI
 
-# load_dotenv()
-
-def analyze_with_csv(df, prompts):
-    llm = Starcoder(api_token="")
+def analyze_with_csv(df, prompts, api_token):
+    llm = Starcoder(api_token=api_token)
     pandas_ai = PandasAI(llm)
     results = []
     for prompt in prompts:
@@ -19,6 +16,9 @@ def analyze_with_csv(df, prompts):
 st.set_page_config(layout='wide')
 
 st.title("Business Analytics Insight AI (BAIai)")
+
+# Create an input field for the OpenAI API key
+api_key = st.text_input("Enter your OpenAI API key", type='password')
 
 input_csv = st.file_uploader("Upload your document file", type=['csv'])
 
@@ -41,17 +41,18 @@ if output_questions:
         questions_list = output_questions.split('\n')
         
         # Process each question with Langchain and display the results
-        results = analyze_with_csv(df, questions_list)
-
-        for idx, result in enumerate(results):
-            st.subheader(f"Question {idx + 1}:")
-            
-            if isinstance(result, pd.DataFrame):
-                st.write("Query Result:")
-                st.dataframe(result, use_container_width=True)
-            elif isinstance(result, str) and result.startswith("data:image/"):
-                st.write("Query Result (Image):")
-                st.image(result, use_container_width=True)
-            else:
-                st.write("Query Result:")
-                st.text(result)
+        if api_key:
+            results = analyze_with_csv(df, questions_list, api_token=api_key)
+            for idx, result in enumerate(results):
+                st.subheader(f"Question {idx + 1}:")
+                if isinstance(result, pd.DataFrame):
+                    st.write("Query Result:")
+                    st.dataframe(result, use_container_width=True)
+                elif isinstance(result, str) and result.startswith("data:image/"):
+                    st.write("Query Result (Image):")
+                    st.image(result, use_container_width=True)
+                else:
+                    st.write("Query Result:")
+                    st.text(result)
+        else:
+            st.warning("Please enter your OpenAI API key to use this feature.")
